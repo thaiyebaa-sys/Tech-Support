@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tech Support Assistant</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .chatbot {
+            width: min(760px, 94vw);
+            height: min(760px, 92vh);
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 12px 40px rgba(0,0,0,.12);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .header {
+            padding: 20px 24px;
+            background: #111827;
+            color: #fff;
+        }
+        .header h1 { margin: 0 0 5px; font-size: 21px; }
+        .header p { margin: 0; color: #d1d5db; font-size: 14px; }
+        .messages {
+            flex: 1;
+            padding: 22px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .message {
+            max-width: 78%;
+            padding: 12px 15px;
+            border-radius: 14px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .bot { align-self: flex-start; background: #eef2f7; color: #172033; }
+        .user { align-self: flex-end; background: #111827; color: #fff; }
+        .composer {
+            display: flex;
+            gap: 10px;
+            padding: 16px;
+            border-top: 1px solid #e5e7eb;
+        }
+        #messageInput {
+            flex: 1;
+            resize: none;
+            border: 1px solid #d1d5db;
+            border-radius: 12px;
+            padding: 12px 14px;
+            font: inherit;
+            outline: none;
+        }
+        #messageInput:focus { border-color: #111827; }
+        #sendButton {
+            border: 0;
+            border-radius: 12px;
+            padding: 0 20px;
+            background: #111827;
+            color: #fff;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        #sendButton:disabled { opacity: .6; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <main class="chatbot">
+        <header class="header">
+            <h1>Tech Support Assistant</h1>
+            <p>Ask me anything related to technology and troubleshooting.</p>
+        </header>
+
+        <section class="messages" id="messages" aria-live="polite">
+            <div class="message bot">
+                Hi! I'm your Tech Support Assistant. How can I help you?
+            </div>
+        </section>
+
+        <form class="composer" id="chatForm">
+            <textarea id="messageInput" rows="1"
+                placeholder="Type your question..."
+                aria-label="Message" required></textarea>
+            <button id="sendButton" type="submit">Send</button>
+        </form>
+    </main>
+
+    <script>
+        const form = document.getElementById("chatForm");
+        const input = document.getElementById("messageInput");
+        const messages = document.getElementById("messages");
+        const sendButton = document.getElementById("sendButton");
+
+        function addMessage(text, type) {
+            const message = document.createElement("div");
+            message.className = `message ${type}`;
+            message.textContent = text;
+            messages.appendChild(message);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const message = input.value.trim();
+            if (!message) return;
+
+            addMessage(message, "user");
+            input.value = "";
+            sendButton.disabled = true;
+
+            try {
+                const response = await fetch("/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || "Request failed.");
+                }
+
+                addMessage(data.reply, "bot");
+            } catch (error) {
+                addMessage(error.message || "Something went wrong.", "bot");
+            } finally {
+                sendButton.disabled = false;
+                input.focus();
+            }
+        });
+
+        input.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                form.requestSubmit();
+            }
+        });
+    </script>
+</body>
+</html>
